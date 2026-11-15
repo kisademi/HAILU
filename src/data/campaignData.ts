@@ -1,3 +1,6 @@
+import heroBannerImg from '../assets/images/hero_eye_vacation_1794741100003.jpg';
+import productSteamMaskImg from '../assets/images/product_steam_mask_1794741100772.jpg';
+import productCampusBundleImg from '../assets/images/product_campus_bundle_1794741101605.jpg';
 import {
   ActivityMeta,
   BadgeItem,
@@ -9,9 +12,9 @@ import {
   StudySession,
 } from '../types';
 
-export const HERO_BANNER_IMAGE = '/src/assets/images/hero_eye_vacation_1794741100003.jpg';
-export const PRODUCT_WELLNESS_KIT_IMAGE = '/src/assets/images/product_steam_mask_1794741100772.jpg';
-export const PRODUCT_CAMPUS_BUNDLE_IMAGE = '/src/assets/images/product_campus_bundle_1794741101605.jpg';
+export const HERO_BANNER_IMAGE = heroBannerImg;
+export const PRODUCT_WELLNESS_KIT_IMAGE = productSteamMaskImg;
+export const PRODUCT_CAMPUS_BUNDLE_IMAGE = productCampusBundleImg;
 
 export const COLLEGES = [
   '计算机科学与技术学院',
