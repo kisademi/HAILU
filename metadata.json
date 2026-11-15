@@ -1,0 +1,6 @@
+{
+  "name": "Eye Vacation",
+  "description": "Campus eye-care mini program with Pomodoro focus timer, eye-rest check-ins, passport stamp collection, campus leaderboard, and tiered rewards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
