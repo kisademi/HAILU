@@ -10,7 +10,7 @@ import {
   Stamp,
   Ticket,
 } from 'lucide-react';
-import { COLLEGES, STUDENT_CLUBS } from '../data/campaignData';
+import { COLLEGES } from '../data/campaignData';
 import { useAppState } from '../context/AppStateContext';
 
 export const ProfilePassportPage: React.FC = () => {
@@ -56,6 +56,10 @@ export const ProfilePassportPage: React.FC = () => {
     setSyncMessage({ ok: res.ok, text: res.message });
   };
 
+  const profileSubline = user.school
+    ? `${user.school}${user.college ? ` · ${user.college}` : ''}${user.enrollmentYear ? ` · ${user.enrollmentYear}入学` : ''}`
+    : `未填写学校（已参与全国排行）${user.enrollmentYear ? ` · ${user.enrollmentYear}入学` : ''}`;
+
   return (
     <div className="space-y-6">
       {/* Passport Identity */}
@@ -69,9 +73,7 @@ export const ProfilePassportPage: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                 {user.name}的眼假期护照
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                学号 {user.studentId} · {user.college} · {user.club}
-              </p>
+              <p className="text-xs text-slate-400 mt-0.5">{profileSubline}</p>
             </div>
           </div>
 
@@ -127,18 +129,65 @@ export const ProfilePassportPage: React.FC = () => {
       {showSettings && (
         <section className="bg-white rounded-3xl border border-sky-200 p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">账号与提醒设置</h2>
+            <h2 className="text-base font-bold text-slate-900">个人资料与提醒设置</h2>
             <button
               type="button"
               onClick={signOut}
               className="min-h-[40px] px-3.5 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>退出 / 切换同学</span>
+              <span>退出 / 切换账号</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label htmlFor="set-school" className="block text-xs font-medium text-slate-600 mb-1.5">
+                学校（选填，留空则仅入全国榜）
+              </label>
+              <input
+                id="set-school"
+                type="text"
+                value={user.school}
+                onChange={(e) => updateUserSettings({ school: e.target.value })}
+                placeholder="选填，如：清华大学"
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="set-college" className="block text-xs font-medium text-slate-600 mb-1.5">
+                所在学院（填学校后生效）
+              </label>
+              <select
+                id="set-college"
+                value={user.college || COLLEGES[0]}
+                disabled={!user.school.trim()}
+                onChange={(e) => updateUserSettings({ college: e.target.value })}
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                {COLLEGES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="set-enrollment" className="block text-xs font-medium text-slate-600 mb-1.5">
+                入学时间（选填）
+              </label>
+              <input
+                id="set-enrollment"
+                type="text"
+                value={user.enrollmentYear}
+                onChange={(e) => updateUserSettings({ enrollmentYear: e.target.value })}
+                placeholder="选填，如：2024年9月"
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white"
+              />
+            </div>
+
             <div>
               <label htmlFor="set-goal" className="block text-xs font-medium text-slate-600 mb-1.5">
                 每日护眼目标（分钟）
@@ -154,42 +203,6 @@ export const ProfilePassportPage: React.FC = () => {
                 }
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm font-mono"
               />
-            </div>
-
-            <div>
-              <label htmlFor="set-college" className="block text-xs font-medium text-slate-600 mb-1.5">
-                所在学院
-              </label>
-              <select
-                id="set-college"
-                value={user.college}
-                onChange={(e) => updateUserSettings({ college: e.target.value })}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white"
-              >
-                {COLLEGES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="set-club" className="block text-xs font-medium text-slate-600 mb-1.5">
-                参与社团
-              </label>
-              <select
-                id="set-club"
-                value={user.club}
-                onChange={(e) => updateUserSettings({ club: e.target.value })}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white"
-              >
-                {STUDENT_CLUBS.map((cl) => (
-                  <option key={cl} value={cl}>
-                    {cl}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -241,7 +254,7 @@ export const ProfilePassportPage: React.FC = () => {
                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >
-              {claimedStampMilestones.includes(3) ? '已领 3 章奖励' : '领取 3 章奖励'}
+              {claimedStampMilestones.includes(3) ? '已领 3 章奖励' : '领取 3 章立减 ¥24 券'}
             </button>
             <button
               type="button"
@@ -255,7 +268,7 @@ export const ProfilePassportPage: React.FC = () => {
                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >
-              {claimedStampMilestones.includes(5) ? '已领 5 章礼盒' : '领取 5 章礼盒'}
+              {claimedStampMilestones.includes(5) ? '已领 5 章奖励' : '领取 5 章立减 ¥40 券'}
             </button>
           </div>
         </div>
@@ -427,7 +440,7 @@ export const ProfilePassportPage: React.FC = () => {
               onClick={() => openSubPage('promo')}
               className="min-h-[44px] px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-medium transition-colors"
             >
-              领取店铺优惠券
+              前往官方商城领券
             </button>
             <button
               type="button"

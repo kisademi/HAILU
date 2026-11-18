@@ -1,25 +1,27 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BASE_LEADERBOARD_GROUPS,
+  BASE_TODAY_CHECKINS,
   CHECKIN_ACTIVITIES,
   INITIAL_BADGES,
   INITIAL_CHECKINS,
+  INITIAL_EYECARE_RECORDS,
   INITIAL_STAMPS,
   INITIAL_STUDY_SESSIONS,
-  MALL_REWARDS,
   OFFLINE_BOOTH_CODES,
-  POMODORO_PRESETS,
+  STUDY_MODE_OPTIONS,
 } from '../data/campaignData';
 import {
   BadgeItem,
   CheckInActivityType,
   CheckInRecord,
+  EyeCareRecord,
   LeaderboardGroup,
   MallReward,
-  PomodoroPreset,
   PosterPayload,
   RedemptionRecord,
   StampSlot,
+  StudyModeOption,
   StudySession,
   SubPageId,
   TabId,
@@ -35,6 +37,8 @@ interface PersistedState {
   weekMinutes: number;
   totalMinutes: number;
   streakDays: number;
+  todayCheckInParticipants: number;
+  eyeCareRecords: EyeCareRecord[];
   checkIns: CheckInRecord[];
   studySessions: StudySession[];
   stamps: StampSlot[];
@@ -44,15 +48,15 @@ interface PersistedState {
   claimedStampMilestones: number[];
 }
 
-const STORAGE_KEY = 'hailuzhong_mini_program_v1';
+const STORAGE_KEY = 'hailuzhong_mini_program_v4';
 
 const DEFAULT_STATE: PersistedState = {
   isAuthorized: false,
   user: {
     name: '林浅',
-    studentId: '20260418',
+    school: '',
     college: '计算机科学与技术学院',
-    club: '校园摄影社',
+    enrollmentYear: '',
     dailyGoalMinutes: 30,
     soundEnabled: true,
     breakReminderEnabled: true,
@@ -63,6 +67,8 @@ const DEFAULT_STATE: PersistedState = {
   weekMinutes: 75,
   totalMinutes: 135,
   streakDays: 3,
+  todayCheckInParticipants: BASE_TODAY_CHECKINS,
+  eyeCareRecords: INITIAL_EYECARE_RECORDS,
   checkIns: INITIAL_CHECKINS,
   studySessions: INITIAL_STUDY_SESSIONS,
   stamps: INITIAL_STAMPS,
@@ -70,24 +76,24 @@ const DEFAULT_STATE: PersistedState = {
   redemptions: [
     {
       id: 'red-init-1',
-      rewardId: 'reward-voucher-15',
-      rewardTitle: '海露旗舰店 85 折学生券',
+      rewardId: 'reward-hylo-1',
+      rewardTitle: '海露玻璃酸钠滴眼液 · 1盒立减8元券',
       category: 'vouchers',
-      pointsSpent: 60,
-      code: 'HLZ-85-9421',
-      redeemedAt: '11月14日 · 18:10',
+      pointsSpent: 40,
+      code: 'HYLO8-9421',
+      redeemedAt: '5月8日 · 18:10',
       status: 'Active',
     },
   ],
   vouchers: [
     {
       id: 'v-init-1',
-      title: '海露旗舰店 85 折学生券',
-      discountLabel: '85 折',
-      code: 'HLZ-85-9421',
+      title: '海露玻璃酸钠滴眼液 1盒立减8元券',
+      discountLabel: '立减 ¥8',
+      code: 'HYLO8-9421',
       source: '积分商城兑换',
-      expiresAt: '2026-12-31',
-      claimedAt: '11月14日',
+      expiresAt: '2026-06-07',
+      claimedAt: '5月8日',
     },
   ],
   claimedStampMilestones: [],
@@ -121,6 +127,9 @@ interface AppContextValue {
   weekMinutes: number;
   totalMinutes: number;
   streakDays: number;
+  todayCheckInParticipants: number;
+  eyeCareRecords: EyeCareRecord[];
+  pendingEyeCareRecords: EyeCareRecord[];
   checkIns: CheckInRecord[];
   studySessions: StudySession[];
   stamps: StampSlot[];
@@ -131,7 +140,8 @@ interface AppContextValue {
   posterPayload: PosterPayload | null;
   toastMessage: string | null;
 
-  selectedPreset: PomodoroPreset;
+  selectedStudyMode: StudyModeOption;
+  isPostStudyRest: boolean;
   customMinutes: number;
   secondsLeft: number;
   timerRunning: boolean;
@@ -149,20 +159,21 @@ interface AppContextValue {
   clearToast: () => void;
   showToast: (msg: string) => void;
 
-  selectPreset: (preset: PomodoroPreset) => void;
+  selectStudyMode: (mode: StudyModeOption) => void;
   setCustomTimerMinutes: (minutes: number) => void;
   startTimer: () => void;
   pauseTimer: () => void;
   endTimer: () => void;
+  simulateTimerComplete: () => void;
   triggerBreakReminderPreview: () => void;
   dismissBreakPopup: () => void;
   startBreakTimerFromPopup: () => void;
 
-  submitCheckIn: (
-    activity: CheckInActivityType,
-    durationMinutes: number,
-    locationNote: string
-  ) => CheckInRecord;
+  submitCheckInFromRecord: (
+    recordId: string,
+    locationNote: string,
+    leaveReason: string
+  ) => CheckInRecord | null;
   syncOfflineStamp: (code: string) => { ok: boolean; message: string };
   claimStampMilestone: (threshold: 3 | 5) => { ok: boolean; message: string };
 
@@ -181,7 +192,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return DEFAULT_STATE;
       const parsed = JSON.parse(raw) as Partial<PersistedState>;
-      return { ...DEFAULT_STATE, ...parsed };
+      return {
+        ...DEFAULT_STATE,
+        ...parsed,
+        user: { ...DEFAULT_STATE.user, ...(parsed.user || {}) },
+      };
     } catch {
       return DEFAULT_STATE;
     }
@@ -191,7 +206,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     } catch {
-      // Ignore storage quota errors
+      // Ignore storage errors
     }
   }, [persisted]);
 
@@ -200,9 +215,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [posterPayload, setPosterPayload] = useState<PosterPayload | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [selectedPreset, setSelectedPreset] = useState<PomodoroPreset>(POMODORO_PRESETS[0]);
-  const [customMinutes, setCustomMinutes] = useState<number>(POMODORO_PRESETS[0].minutes);
-  const [secondsLeft, setSecondsLeft] = useState<number>(POMODORO_PRESETS[0].minutes * 60);
+  const [selectedStudyMode, setSelectedStudyMode] = useState<StudyModeOption>(STUDY_MODE_OPTIONS[0]);
+  const [isPostStudyRest, setIsPostStudyRest] = useState<boolean>(false);
+  const [customMinutes, setCustomMinutes] = useState<number>(STUDY_MODE_OPTIONS[0].defaultMinutes);
+  const [secondsLeft, setSecondsLeft] = useState<number>(STUDY_MODE_OPTIONS[0].defaultMinutes * 60);
   const [timerRunning, setTimerRunning] = useState<boolean>(false);
   const [timerHasStarted, setTimerHasStarted] = useState<boolean>(false);
   const [showBreakPopup, setShowBreakPopup] = useState<boolean>(false);
@@ -217,7 +233,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     toastTimerRef.current = window.setTimeout(() => {
       setToastMessage(null);
-    }, 3400);
+    }, 3600);
   }, []);
 
   const clearToast = useCallback(() => {
@@ -225,18 +241,74 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const completeTimerSession = useCallback(
-    (minutesCompleted: number, status: 'completed' | 'ended_early', modeLabel: string, kind: 'focus' | 'rest') => {
+    (
+      minutesCompleted: number,
+      status: 'completed' | 'ended_early',
+      mode: StudyModeOption,
+      postStudyRest: boolean
+    ) => {
+      const cleanMins = Math.max(1, minutesCompleted);
+      const nowLabel = formatNowLabel();
+
+      // Study/Work creates a study record and prompts 5-min rest (does NOT create a check-inable eye-care record directly)
+      if (mode.kind === 'study' && !postStudyRest) {
+        const session: StudySession = {
+          id: `ss-${Date.now()}`,
+          activityType: 'study_work',
+          modeLabel: mode.label,
+          focusMinutes: cleanMins,
+          completedAt: nowLabel,
+          status,
+          isEyeCareRecord: false,
+        };
+        setPersisted((prev) => ({
+          ...prev,
+          points: prev.points + (status === 'completed' ? 10 : 0),
+          studySessions: [session, ...prev.studySessions],
+        }));
+
+        if (status === 'completed') {
+          setLastCompletedFocusMinutes(cleanMins);
+          if (persisted.user.breakReminderEnabled) {
+            setShowBreakPopup(true);
+          } else {
+            setShowBreakPopup(true);
+          }
+        } else {
+          showToast('学习/工作已结束，未完成 5 分钟休息不会生成护眼记录。');
+        }
+        return;
+      }
+
+      // Either a 5-min post-study rest OR one of the 5 inherent eye-care behaviors
+      const eyeActivity: CheckInActivityType = postStudyRest
+        ? 'close_eyes'
+        : (mode.id as CheckInActivityType);
+      const recordLabel = postStudyRest ? '专注后 5 分钟休息' : mode.label;
+      const sourceLabel = postStudyRest ? '自习室 · 休息5分钟' : `自习室 · ${mode.label}`;
+
       const session: StudySession = {
         id: `ss-${Date.now()}`,
-        modeLabel,
-        focusMinutes: Math.max(1, minutesCompleted),
-        completedAt: formatNowLabel(),
+        activityType: postStudyRest ? 'close_eyes' : mode.id,
+        modeLabel: recordLabel,
+        focusMinutes: cleanMins,
+        completedAt: nowLabel,
         status,
+        isEyeCareRecord: true,
+      };
+
+      const newEyeCareRecord: EyeCareRecord = {
+        id: `ecr-${Date.now()}`,
+        activity: eyeActivity,
+        label: recordLabel,
+        durationMinutes: cleanMins,
+        completedAt: nowLabel,
+        sourceLabel,
+        checkedIn: false,
       };
 
       setPersisted((prev) => {
-        const addedEyeMinutes = kind === 'rest' ? Math.max(1, minutesCompleted) : 0;
-        const nextTotal = prev.totalMinutes + addedEyeMinutes;
+        const nextTotal = prev.totalMinutes + cleanMins;
         const nextBadges = prev.badges.map((b) => {
           if (b.id === 'badge-120-min' && nextTotal >= 120 && !b.unlocked) {
             return { ...b, unlocked: true, unlockedAt: '今天' };
@@ -246,27 +318,23 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         return {
           ...prev,
-          todayMinutes: prev.todayMinutes + addedEyeMinutes,
-          weekMinutes: prev.weekMinutes + addedEyeMinutes,
+          todayMinutes: prev.todayMinutes + cleanMins,
+          weekMinutes: prev.weekMinutes + cleanMins,
           totalMinutes: nextTotal,
-          points: prev.points + (status === 'completed' ? 10 : 0),
           studySessions: [session, ...prev.studySessions],
+          eyeCareRecords: [newEyeCareRecord, ...prev.eyeCareRecords],
           badges: nextBadges,
         };
       });
 
-      if (kind === 'focus' && status === 'completed') {
-        setLastCompletedFocusMinutes(minutesCompleted);
-        if (persisted.user.breakReminderEnabled) {
-          setShowBreakPopup(true);
-        } else {
-          showToast('专注已完成（+10 积分），记得远眺放松双眼。');
-        }
-      } else if (kind === 'rest') {
-        showToast(`护眼休息已完成（+${Math.max(1, minutesCompleted)} 分钟护眼时长）。`);
-      } else {
-        showToast('本次自习记录已保存。');
+      if (postStudyRest) {
+        setIsPostStudyRest(false);
+        setSelectedStudyMode(STUDY_MODE_OPTIONS[0]);
+        setCustomMinutes(STUDY_MODE_OPTIONS[0].defaultMinutes);
+        setSecondsLeft(STUDY_MODE_OPTIONS[0].defaultMinutes * 60);
       }
+
+      showToast(`已完成「${recordLabel}」（${cleanMins} 分钟），已生成可打卡护眼记录！`);
     },
     [persisted.user.breakReminderEnabled, showToast]
   );
@@ -279,28 +347,29 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           window.clearInterval(interval);
           setTimerRunning(false);
           setTimerHasStarted(false);
-          completeTimerSession(
-            customMinutes,
-            'completed',
-            selectedPreset.label,
-            selectedPreset.kind
-          );
+          completeTimerSession(customMinutes, 'completed', selectedStudyMode, isPostStudyRest);
           return customMinutes * 60;
         }
         return prev - 1;
       });
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [timerRunning, customMinutes, selectedPreset, completeTimerSession]);
+  }, [timerRunning, customMinutes, selectedStudyMode, isPostStudyRest, completeTimerSession]);
 
   const authorizeUser = useCallback(
     (profile: Partial<UserProfile>) => {
       setPersisted((prev) => {
         const name = (profile.name ?? prev.user.name).trim() || '林浅';
+        const school = (profile.school ?? prev.user.school).trim();
+        const college = school ? (profile.college ?? prev.user.college) : '';
+        const enrollmentYear = (profile.enrollmentYear ?? prev.user.enrollmentYear).trim();
         const nextUser: UserProfile = {
           ...prev.user,
           ...profile,
           name,
+          school,
+          college,
+          enrollmentYear,
           avatarInitials: computeInitials(name),
         };
         return {
@@ -311,7 +380,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       setActiveTab('home');
       setSubPage(null);
-      showToast('校园身份已授权，欢迎来到海露钟。');
+      showToast('欢迎来到海露钟，已进入全国护眼排行。');
     },
     [showToast]
   );
@@ -330,12 +399,20 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     (patch: Partial<UserProfile>) => {
       setPersisted((prev) => {
         const nextName = patch.name !== undefined ? patch.name.trim() || prev.user.name : prev.user.name;
+        const nextSchool = patch.school !== undefined ? patch.school.trim() : prev.user.school;
+        const nextCollege = nextSchool
+          ? patch.college !== undefined
+            ? patch.college
+            : prev.user.college || '计算机科学与技术学院'
+          : '';
         return {
           ...prev,
           user: {
             ...prev.user,
             ...patch,
             name: nextName,
+            school: nextSchool,
+            college: nextCollege,
             avatarInitials: computeInitials(nextName),
           },
         };
@@ -354,21 +431,26 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSubPage(page);
   }, []);
 
-  const selectPreset = useCallback((preset: PomodoroPreset) => {
+  const selectStudyMode = useCallback((mode: StudyModeOption) => {
     setTimerRunning(false);
     setTimerHasStarted(false);
-    setSelectedPreset(preset);
-    setCustomMinutes(preset.minutes);
-    setSecondsLeft(preset.minutes * 60);
+    setIsPostStudyRest(false);
+    setSelectedStudyMode(mode);
+    setCustomMinutes(mode.defaultMinutes);
+    setSecondsLeft(mode.defaultMinutes * 60);
   }, []);
 
-  const setCustomTimerMinutes = useCallback((minutes: number) => {
-    const clamped = Math.max(1, Math.min(90, minutes));
-    setTimerRunning(false);
-    setTimerHasStarted(false);
-    setCustomMinutes(clamped);
-    setSecondsLeft(clamped * 60);
-  }, []);
+  const setCustomTimerMinutes = useCallback(
+    (minutes: number) => {
+      if (isPostStudyRest) return;
+      const clamped = Math.max(1, Math.min(90, minutes));
+      setTimerRunning(false);
+      setTimerHasStarted(false);
+      setCustomMinutes(clamped);
+      setSecondsLeft(clamped * 60);
+    },
+    [isPostStudyRest]
+  );
 
   const startTimer = useCallback(() => {
     setTimerRunning(true);
@@ -386,16 +468,24 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimerHasStarted(false);
     setSecondsLeft(customMinutes * 60);
     if (elapsedSeconds >= 5) {
-      completeTimerSession(
-        elapsedMinutes,
-        'ended_early',
-        `${customMinutes}分钟 自定义专注`,
-        selectedPreset.kind
-      );
+      completeTimerSession(elapsedMinutes, 'ended_early', selectedStudyMode, isPostStudyRest);
     } else {
+      if (isPostStudyRest) {
+        setIsPostStudyRest(false);
+        setSelectedStudyMode(STUDY_MODE_OPTIONS[0]);
+        setCustomMinutes(STUDY_MODE_OPTIONS[0].defaultMinutes);
+        setSecondsLeft(STUDY_MODE_OPTIONS[0].defaultMinutes * 60);
+      }
       showToast('计时已重置。');
     }
-  }, [customMinutes, secondsLeft, selectedPreset.kind, completeTimerSession, showToast]);
+  }, [customMinutes, secondsLeft, selectedStudyMode, isPostStudyRest, completeTimerSession, showToast]);
+
+  const simulateTimerComplete = useCallback(() => {
+    setTimerRunning(false);
+    setTimerHasStarted(false);
+    setSecondsLeft(customMinutes * 60);
+    completeTimerSession(customMinutes, 'completed', selectedStudyMode, isPostStudyRest);
+  }, [customMinutes, selectedStudyMode, isPostStudyRest, completeTimerSession]);
 
   const triggerBreakReminderPreview = useCallback(() => {
     setLastCompletedFocusMinutes(customMinutes);
@@ -404,55 +494,68 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const dismissBreakPopup = useCallback(() => {
     setShowBreakPopup(false);
-  }, []);
+    showToast('本次未选择休息，未生成可打卡护眼记录。');
+  }, [showToast]);
 
   const startBreakTimerFromPopup = useCallback(() => {
-    const restPreset = POMODORO_PRESETS.find((p) => p.kind === 'rest') || POMODORO_PRESETS[3];
     setShowBreakPopup(false);
-    setSelectedPreset(restPreset);
-    setCustomMinutes(restPreset.minutes);
-    setSecondsLeft(restPreset.minutes * 60);
+    setIsPostStudyRest(true);
+    setCustomMinutes(5);
+    setSecondsLeft(5 * 60);
     setTimerRunning(true);
     setTimerHasStarted(true);
     setSubPage(null);
     setActiveTab('study');
-  }, []);
+    showToast('已开始 5 分钟休息计时，完成后将生成可打卡护眼记录。');
+  }, [showToast]);
 
   const buildPosterFromRecord = useCallback(
     (record: CheckInRecord, user: UserProfile): PosterPayload => ({
       id: record.id,
       studentName: user.name,
+      school: user.school,
       college: user.college,
-      club: user.club,
+      enrollmentYear: user.enrollmentYear,
       activityLabel: record.label,
       leaveReason: record.leaveReason,
       durationMinutes: record.durationMinutes,
       timestamp: record.timestamp,
-      locationNote: record.locationNote || '校园窗边休息角',
+      locationNote: record.locationNote || '窗边休息角',
       leaveCode: `HL-${record.id.slice(-4).toUpperCase()}`,
+      participantOrder: record.participantOrder || BASE_TODAY_CHECKINS,
     }),
     []
   );
 
-  const submitCheckIn = useCallback(
-    (activity: CheckInActivityType, durationMinutes: number, locationNote: string): CheckInRecord => {
-      const meta = CHECKIN_ACTIVITIES.find((a) => a.type === activity) || CHECKIN_ACTIVITIES[0];
-      const cleanDuration = Math.max(1, Math.min(120, durationMinutes));
-      const bonus = Math.floor(cleanDuration / 10) * 5;
+  const submitCheckInFromRecord = useCallback(
+    (recordId: string, locationNote: string, leaveReason: string): CheckInRecord | null => {
+      const targetRecord = persisted.eyeCareRecords.find((r) => r.id === recordId && !r.checkedIn);
+      if (!targetRecord) {
+        showToast('请先在海露钟自习室完成护眼计时，获取可用护眼记录。');
+        return null;
+      }
+
+      const meta =
+        CHECKIN_ACTIVITIES.find((a) => a.type === targetRecord.activity) || CHECKIN_ACTIVITIES[0];
+      const bonus = Math.floor(targetRecord.durationMinutes / 10) * 5;
       const earnedPoints = meta.pointsPerSession + bonus;
 
       let newlyUnlockedStampTitle: string | undefined;
+      const nextParticipantOrder = persisted.todayCheckInParticipants + 1;
 
-      const recordId = `ci-${Date.now()}`;
-      const newRecord: CheckInRecord = {
-        id: recordId,
-        activity,
-        label: meta.label,
-        durationMinutes: cleanDuration,
+      const cleanLocation = locationNote.trim() || '主图书馆窗边';
+      const cleanReason = leaveReason.trim() || meta.leaveReason;
+
+      const newCheckIn: CheckInRecord = {
+        id: `ci-${Date.now()}`,
+        activity: targetRecord.activity,
+        label: targetRecord.label,
+        durationMinutes: targetRecord.durationMinutes,
         pointsEarned: earnedPoints,
         timestamp: formatNowLabel(),
-        locationNote: locationNote.trim() || '校园自习区',
-        leaveReason: meta.leaveReason,
+        locationNote: cleanLocation,
+        leaveReason: cleanReason,
+        participantOrder: nextParticipantOrder,
       };
 
       setPersisted((prev) => {
@@ -470,44 +573,48 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
 
         if (newlyUnlockedStampTitle) {
-          newRecord.stampUnlocked = newlyUnlockedStampTitle;
+          newCheckIn.stampUnlocked = newlyUnlockedStampTitle;
         }
 
         const unlockedCount = nextStamps.filter((s) => s.unlocked).length;
-        const nextTotalMinutes = prev.totalMinutes + cleanDuration;
-
         const nextBadges = prev.badges.map((b) => {
-          if (b.id === 'badge-120-min' && nextTotalMinutes >= 120 && !b.unlocked) {
-            return { ...b, unlocked: true, unlockedAt: '今天' };
-          }
           if (b.id === 'badge-passport-full' && unlockedCount >= 5 && !b.unlocked) {
             return { ...b, unlocked: true, unlockedAt: '今天' };
           }
           return b;
         });
 
+        const nextEyeCareRecords = prev.eyeCareRecords.map((r) =>
+          r.id === recordId ? { ...r, checkedIn: true } : r
+        );
+
         return {
           ...prev,
           points: prev.points + earnedPoints,
-          todayMinutes: prev.todayMinutes + cleanDuration,
-          weekMinutes: prev.weekMinutes + cleanDuration,
-          totalMinutes: nextTotalMinutes,
-          checkIns: [newRecord, ...prev.checkIns],
+          todayCheckInParticipants: nextParticipantOrder,
+          eyeCareRecords: nextEyeCareRecords,
+          checkIns: [newCheckIn, ...prev.checkIns],
           stamps: nextStamps,
           badges: nextBadges,
         };
       });
 
-      const poster = buildPosterFromRecord(newRecord, persisted.user);
+      const poster = buildPosterFromRecord(newCheckIn, persisted.user);
       setPosterPayload(poster);
       showToast(
         newlyUnlockedStampTitle
-          ? `打卡成功（+${earnedPoints} 积分），解锁「${newlyUnlockedStampTitle}」印章。`
-          : `打卡成功（+${earnedPoints} 积分，+${cleanDuration} 分钟护眼时长）。`
+          ? `已申请护眼请假条！你是今日第 ${nextParticipantOrder} 位打卡人，解锁「${newlyUnlockedStampTitle}」印章。`
+          : `已申请护眼请假条！你是今日第 ${nextParticipantOrder} 位打卡人（+${earnedPoints} 积分）。`
       );
-      return newRecord;
+      return newCheckIn;
     },
-    [persisted.user, buildPosterFromRecord, showToast]
+    [
+      persisted.eyeCareRecords,
+      persisted.todayCheckInParticipants,
+      persisted.user,
+      buildPosterFromRecord,
+      showToast,
+    ]
   );
 
   const syncOfflineStamp = useCallback(
@@ -575,20 +682,20 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         threshold === 3
           ? {
               id: `v-ms3-${Date.now()}`,
-              title: '眼假期护照 · 集满3章 8折优惠券',
-              discountLabel: '8 折',
-              code: `HZ3-${Math.floor(1000 + Math.random() * 9000)}`,
+              title: '眼假期护照 · 海露3盒立减24元券',
+              discountLabel: '立减 ¥24',
+              code: `HZ24-${Math.floor(1000 + Math.random() * 9000)}`,
               source: '护照集章礼 (3枚)',
-              expiresAt: '2026-12-31',
+              expiresAt: '2026-06-07',
               claimedAt: '今天',
             }
           : {
               id: `v-ms5-${Date.now()}`,
-              title: '眼假期护照 · 集满5章 校园礼盒兑换券',
-              discountLabel: '免费领',
-              code: `HZ5-${Math.floor(1000 + Math.random() * 9000)}`,
+              title: '眼假期护照 · 海露5盒立减40元券',
+              discountLabel: '立减 ¥40',
+              code: `HZ40-${Math.floor(1000 + Math.random() * 9000)}`,
               source: '护照集章礼 (5枚)',
-              expiresAt: '2026-12-31',
+              expiresAt: '2026-06-07',
               claimedAt: '今天',
             };
 
@@ -617,11 +724,14 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (persisted.points < reward.pointsCost) {
         return {
           ok: false,
-          message: `还差 ${reward.pointsCost - persisted.points} 积分即可兑换该好礼。`,
+          message: `还差 ${reward.pointsCost - persisted.points} 积分即可兑换该奖品。`,
         };
       }
 
-      const code = `HL-${reward.category.slice(0, 2).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const isVoucher = reward.category === 'vouchers' && typeof reward.discountAmount === 'number';
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const code = isVoucher ? `HYLO-${reward.discountAmount}-${randomSuffix}` : `HL-GIFT-${randomSuffix}`;
+
       const record: RedemptionRecord = {
         id: `red-${Date.now()}`,
         rewardId: reward.id,
@@ -633,27 +743,26 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         status: 'Active',
       };
 
-      const maybeVoucher: VoucherItem | null =
-        reward.category === 'vouchers' || reward.category === 'tickets'
-          ? {
-              id: `v-mall-${Date.now()}`,
-              title: reward.title,
-              discountLabel: reward.category === 'tickets' ? '入场券' : '优惠券',
-              code,
-              source: '积分商城兑换',
-              expiresAt: '2026-12-31',
-              claimedAt: '今天',
-            }
-          : null;
+      const voucher: VoucherItem = {
+        id: `v-mall-${Date.now()}`,
+        title: reward.title,
+        discountLabel: isVoucher ? `立减 ¥${reward.discountAmount}` : '实物奖品凭证',
+        code,
+        source: isVoucher ? '积分商城兑换' : '积分商城周边兑奖',
+        expiresAt: '2026-06-07',
+        claimedAt: '今天',
+      };
 
       setPersisted((prev) => ({
         ...prev,
         points: prev.points - reward.pointsCost,
         redemptions: [record, ...prev.redemptions],
-        vouchers: maybeVoucher ? [maybeVoucher, ...prev.vouchers] : prev.vouchers,
+        vouchers: [voucher, ...prev.vouchers],
       }));
 
-      const msg = `兑换成功「${reward.title}」，核销码：${code}`;
+      const msg = isVoucher
+        ? `兑换成功「${reward.title}」，券码：${code}`
+        : `兑换成功「${reward.title}」，核销码：${code}（请于6月7日前凭码领取）`;
       showToast(msg);
       return { ok: true, message: msg };
     },
@@ -664,7 +773,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     (title: string, discountLabel: string, codePrefix: string): { ok: boolean; message: string } => {
       const alreadyClaimed = persisted.vouchers.some((v) => v.title === title);
       if (alreadyClaimed) {
-        return { ok: false, message: '你已领取过该校园店铺优惠券。' };
+        return { ok: false, message: '你已领取过该规格优惠券。' };
       }
       const code = `${codePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
       const voucher: VoucherItem = {
@@ -672,8 +781,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         title,
         discountLabel,
         code,
-        source: '海露校园商城活动',
-        expiresAt: '2026-12-31',
+        source: '海露官方商城活动',
+        expiresAt: '2026-06-07',
         claimedAt: '今天',
       };
       setPersisted((prev) => ({
@@ -701,10 +810,23 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSubPage('poster');
   }, [persisted.checkIns, persisted.user, buildPosterFromRecord]);
 
+  const pendingEyeCareRecords = useMemo(
+    () => persisted.eyeCareRecords.filter((r) => !r.checkedIn),
+    [persisted.eyeCareRecords]
+  );
+
   const leaderboardGroups = useMemo(() => {
     const extraMinutes = Math.max(0, persisted.totalMinutes - DEFAULT_STATE.totalMinutes);
     return BASE_LEADERBOARD_GROUPS.map((group) => {
-      if (group.name === persisted.user.college || group.name === persisted.user.club) {
+      if (persisted.user.school && group.type === 'college' && group.name === persisted.user.college) {
+        const nextTotal = group.totalMinutes + extraMinutes;
+        return {
+          ...group,
+          totalMinutes: nextTotal,
+          avgMinutes: Math.round(nextTotal / group.membersCount),
+        };
+      }
+      if (group.id === 'nat-bj') {
         const nextTotal = group.totalMinutes + extraMinutes;
         return {
           ...group,
@@ -714,9 +836,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return group;
     }).sort((a, b) => b.totalMinutes - a.totalMinutes);
-  }, [persisted.totalMinutes, persisted.user.college, persisted.user.club]);
-
-  void MALL_REWARDS;
+  }, [persisted.totalMinutes, persisted.user.school, persisted.user.college]);
 
   const value: AppContextValue = {
     isAuthorized: persisted.isAuthorized,
@@ -728,6 +848,9 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     weekMinutes: persisted.weekMinutes,
     totalMinutes: persisted.totalMinutes,
     streakDays: persisted.streakDays,
+    todayCheckInParticipants: persisted.todayCheckInParticipants,
+    eyeCareRecords: persisted.eyeCareRecords,
+    pendingEyeCareRecords,
     checkIns: persisted.checkIns,
     studySessions: persisted.studySessions,
     stamps: persisted.stamps,
@@ -737,7 +860,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     claimedStampMilestones: persisted.claimedStampMilestones,
     posterPayload,
     toastMessage,
-    selectedPreset,
+    selectedStudyMode,
+    isPostStudyRest,
     customMinutes,
     secondsLeft,
     timerRunning,
@@ -752,15 +876,16 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     openSubPage,
     clearToast,
     showToast,
-    selectPreset,
+    selectStudyMode,
     setCustomTimerMinutes,
     startTimer,
     pauseTimer,
     endTimer,
+    simulateTimerComplete,
     triggerBreakReminderPreview,
     dismissBreakPopup,
     startBreakTimerFromPopup,
-    submitCheckIn,
+    submitCheckInFromRecord,
     syncOfflineStamp,
     claimStampMilestone,
     redeemMallReward,

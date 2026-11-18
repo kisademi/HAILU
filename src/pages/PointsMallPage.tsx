@@ -1,28 +1,19 @@
 import React, { useState } from 'react';
-import { Check, Lock, ShoppingBag, Ticket } from 'lucide-react';
+import { Calendar, Check, Lock, ShoppingBag, Ticket } from 'lucide-react';
+import { HyloMerchVisual, HyloProductVisual } from '../components/HyloBrandAssets';
 import { ResilientImage } from '../components/ResilientImage';
-import { DURATION_TIERS, MALL_REWARDS } from '../data/campaignData';
+import {
+  CHECKIN_POINTS_WINDOW,
+  DURATION_TIERS,
+  MALL_REWARDS,
+  REDEMPTION_DEADLINE,
+} from '../data/campaignData';
 import { useAppState } from '../context/AppStateContext';
-import { MallCategory, MallReward } from '../types';
-
-const CATEGORY_TABS: { id: MallCategory; label: string }[] = [
-  { id: 'all', label: '全部好礼' },
-  { id: 'vouchers', label: '优惠券' },
-  { id: 'samples', label: '体验小样' },
-  { id: 'merchandise', label: '限定周边' },
-  { id: 'tickets', label: '活动门票' },
-];
-
-const CATEGORY_LABELS: Record<Exclude<MallCategory, 'all'>, string> = {
-  vouchers: '优惠券',
-  samples: '体验小样',
-  merchandise: '限定周边',
-  tickets: '活动门票',
-};
+import { MallReward } from '../types';
 
 export const PointsMallPage: React.FC = () => {
   const { points, totalMinutes, redemptions, redeemMallReward, openSubPage } = useAppState();
-  const [category, setCategory] = useState<MallCategory>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'vouchers' | 'merchandise'>('all');
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   const currentTier =
@@ -30,9 +21,9 @@ export const PointsMallPage: React.FC = () => {
   const nextTier = DURATION_TIERS.find((t) => t.minMinutes > totalMinutes);
 
   const visibleRewards =
-    category === 'all'
+    categoryFilter === 'all'
       ? MALL_REWARDS
-      : MALL_REWARDS.filter((item) => item.category === category);
+      : MALL_REWARDS.filter((item) => item.category === categoryFilter);
 
   const handleRedeem = (reward: MallReward) => {
     const res = redeemMallReward(reward);
@@ -44,12 +35,18 @@ export const PointsMallPage: React.FC = () => {
       {/* Header Summary */}
       <section className="bg-white rounded-3xl border border-slate-200/70 p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         <div className="lg:col-span-7">
-          <p className="text-xs text-sky-700">积分商城与阶梯礼遇</p>
+          <p className="text-xs text-sky-700">积分商城 · 优惠券与校园周边好礼</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            用护眼时长解锁校园专属好礼
+            用护眼积分兑换海露优惠券与限定周边
           </h1>
           <p className="mt-2 text-sm text-slate-500 max-w-xl leading-relaxed">
-            累计护眼时长越高，可解锁的礼遇等级越高，包含洋甘菊蒸汽眼罩、海露钟帆布袋与草坪音乐会入场券。
+            可兑换海露玻璃酸钠滴眼液立减券（1/2/3/5盒对应 -8/-16/-24/-40 元），以及海露钟限定帆布包、随行水杯、明信片套装与亚克力挂件。
+          </p>
+          <p className="mt-3 text-xs text-sky-800 inline-flex flex-wrap items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-sky-600 shrink-0" aria-hidden="true" />
+            <span>
+              打卡得积分：{CHECKIN_POINTS_WINDOW} · 奖品兑换截止：{REDEMPTION_DEADLINE}
+            </span>
           </p>
         </div>
 
@@ -67,7 +64,7 @@ export const PointsMallPage: React.FC = () => {
               className="min-h-[40px] px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-sky-300 text-sky-800 text-xs font-medium inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
             >
               <ShoppingBag className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>商城礼盒</span>
+              <span>前往官方商城</span>
             </button>
           </div>
 
@@ -99,13 +96,17 @@ export const PointsMallPage: React.FC = () => {
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-1 p-1 bg-white rounded-2xl border border-slate-200/70 w-fit">
-        {CATEGORY_TABS.map((tab) => (
+        {[
+          { id: 'all' as const, label: '全部奖品' },
+          { id: 'vouchers' as const, label: '海露优惠券' },
+          { id: 'merchandise' as const, label: '帆布包 · 水杯 · 明信片 · 挂件' },
+        ].map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => setCategory(tab.id)}
+            onClick={() => setCategoryFilter(tab.id)}
             className={`min-h-[40px] px-4 py-2 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
-              category === tab.id
+              categoryFilter === tab.id
                 ? 'bg-sky-600 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-sky-50/50'
             }`}
@@ -116,11 +117,12 @@ export const PointsMallPage: React.FC = () => {
       </div>
 
       {/* Rewards Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {visibleRewards.map((item) => {
           const tierUnlocked = totalMinutes >= item.requiredMinutesTier;
           const canAfford = points >= item.pointsCost;
           const eligible = tierUnlocked && canAfford;
+          const isVoucher = item.category === 'vouchers';
 
           return (
             <article
@@ -128,18 +130,33 @@ export const PointsMallPage: React.FC = () => {
               className="bg-white rounded-3xl border border-slate-200/70 overflow-hidden flex flex-col justify-between"
             >
               <div>
-                {item.imageUrl && (
-                  <div className="h-44 bg-sky-50 overflow-hidden">
+                {isVoucher ? (
+                  <HyloProductVisual
+                    boxes={Number(item.boxCountLabel?.match(/\d+/)?.[0] || 1)}
+                    title={item.title}
+                    specLabel={item.boxCountLabel}
+                    className="aspect-[4/3]"
+                  />
+                ) : (item.id === 'reward-merch-charm' || item.id === 'reward-merch-postcard') && item.imageUrl ? (
+                  <div className="aspect-[4/3] bg-sky-50 overflow-hidden">
                     <ResilientImage
                       src={item.imageUrl}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
+                ) : (
+                  <HyloMerchVisual
+                    rewardId={item.id}
+                    title={item.title}
+                    className="aspect-[4/3]"
+                  />
                 )}
                 <div className="p-5">
                   <p className="text-xs text-slate-400">
-                    {CATEGORY_LABELS[item.category]} · {item.tierName}
+                    {isVoucher
+                      ? `${item.boxCountLabel} · ${item.tierName} · 优惠 -${item.discountAmount} 元`
+                      : `${item.specLabel || '限定周边'} · ${item.tierName} · 余 ${item.stock} 件`}
                   </p>
                   <h2 className="mt-1 text-base font-bold text-slate-900">{item.title}</h2>
                   <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
@@ -153,7 +170,15 @@ export const PointsMallPage: React.FC = () => {
                   <span className="text-lg font-bold font-mono text-sky-700 tabular-nums">
                     {item.pointsCost} 积分
                   </span>
-                  <p className="text-[11px] text-slate-400 tabular-nums">余 {item.stock} 份</p>
+                  {isVoucher && typeof item.originalPrice === 'number' ? (
+                    <p className="text-[11px] text-slate-400 tabular-nums">
+                      原价 ¥{item.originalPrice} · 券后 ¥{item.finalPrice}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400">
+                      实物好礼 · 截止 {REDEMPTION_DEADLINE} 兑换
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -175,7 +200,7 @@ export const PointsMallPage: React.FC = () => {
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>立即兑换</span>
+                      <span>{isVoucher ? '兑换立减券' : '兑换奖品'}</span>
                     </>
                   )}
                 </button>

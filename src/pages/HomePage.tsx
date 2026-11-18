@@ -20,6 +20,7 @@ export const HomePage: React.FC = () => {
     weekMinutes,
     totalMinutes,
     streakDays,
+    todayCheckInParticipants,
     points,
     stamps,
     checkIns,
@@ -36,17 +37,23 @@ export const HomePage: React.FC = () => {
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringOffset = ringCircumference * (1 - progressPct / 100);
 
+  const identitySubtitle = user.school
+    ? `${user.school}${user.college ? ` · ${user.college}` : ''}${user.enrollmentYear ? ` · ${user.enrollmentYear}` : ''}`
+    : '全国护眼同行者 · 未填写学校（仅参与全国榜）';
+
   return (
     <div className="space-y-6">
       {/* Minimalist Hero Split */}
       <section className="bg-white rounded-3xl border border-slate-200/70 overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-stretch">
         <div className="lg:col-span-7 p-6 sm:p-9 flex flex-col justify-between">
           <div>
-            <p className="text-xs text-slate-500">
-              {user.college} · {user.club}
-            </p>
+            <p className="text-xs text-slate-500">{identitySubtitle}</p>
             <h1 className="mt-2.5 text-2xl sm:text-3xl font-bold text-slate-900 leading-snug">
-              你好，{user.name}。今天也给双眼留一点清澈的休息时间。
+              你好，{user.name}。今天已有{' '}
+              <span className="font-mono text-sky-700 tabular-nums">
+                {todayCheckInParticipants.toLocaleString()}
+              </span>{' '}
+              人打卡护眼。
             </h1>
             <p className="mt-2.5 text-sm text-slate-500 leading-relaxed max-w-lg">
               用专注计时陪伴学习，在休息提示响起时望向窗外，积攒你的眼假期护眼印章。
@@ -86,7 +93,7 @@ export const HomePage: React.FC = () => {
             src={HERO_BANNER_IMAGE}
             alt="明亮安静的校园图书馆窗台与远处绿树晴空"
             className="w-full h-full object-cover"
-            fallbackLabel="校园晴空窗景"
+            fallbackLabel="海露钟晴空窗景"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-sky-950/60 via-transparent to-transparent flex items-end p-5">
             <div className="text-white">
@@ -126,12 +133,12 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/70 p-5">
-          <p className="text-xs text-slate-500">连续打卡</p>
+          <p className="text-xs text-slate-500">今日打卡人数</p>
           <p className="mt-1 text-2xl font-bold text-slate-900 font-mono tabular-nums">
-            {streakDays} 天
+            {todayCheckInParticipants.toLocaleString()}
           </p>
           <p className="mt-0.5 text-xs text-slate-400 tabular-nums">
-            本周 {weekMinutes}m · 累计 {totalMinutes}m
+            连续 {streakDays} 天 · 累计 {totalMinutes}m
           </p>
         </div>
 
@@ -157,7 +164,8 @@ export const HomePage: React.FC = () => {
             {unlockedStamps} / 5
           </p>
           <p className="mt-0.5 text-xs text-sky-600">
-            {unlockedStamps >= 3 ? '已解锁集章礼 →' : `还差 ${3 - unlockedStamps} 枚解锁 →`}
+            本周 {weekMinutes}m ·{' '}
+            {unlockedStamps >= 3 ? '已解锁集章礼 →' : `差 ${3 - unlockedStamps} 枚 →`}
           </p>
         </button>
       </section>
@@ -170,7 +178,7 @@ export const HomePage: React.FC = () => {
               <div>
                 <h2 className="text-base font-bold text-slate-900">眼假期护照进度</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  集齐 3 枚领 8 折券 · 集齐 5 枚领校园护眼礼盒
+                  集齐 3 枚领海露 3 盒立减 ¥24 券 · 集齐 5 枚领 5 盒立减 ¥40 券
                 </p>
               </div>
               <button
@@ -217,10 +225,10 @@ export const HomePage: React.FC = () => {
             className="bg-sky-600 hover:bg-sky-700 text-white rounded-2xl p-5 text-left flex items-center justify-between gap-4 transition-colors"
           >
             <div>
-              <p className="text-xs text-sky-100">校园专属礼券</p>
-              <h3 className="mt-1 text-base font-bold">领取海露校园护眼礼盒券</h3>
+              <p className="text-xs text-sky-100">官方商城直降券</p>
+              <h3 className="mt-1 text-base font-bold">海露玻璃酸钠滴眼液专享立减</h3>
               <p className="mt-1 text-xs text-sky-100/90">
-                蒸汽眼罩与夜间修护组合，学生最高立省 33%
+                1盒减8元 · 2盒减16元 · 3盒减24元 · 5盒减40元
               </p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
@@ -237,7 +245,7 @@ export const HomePage: React.FC = () => {
               <Gift className="w-5 h-5 text-sky-600" aria-hidden="true" />
               <div className="mt-3">
                 <h3 className="text-sm font-bold text-slate-900">积分商城</h3>
-                <p className="text-xs text-slate-400 mt-0.5">小样与周边</p>
+                <p className="text-xs text-slate-400 mt-0.5">优惠券与帆布包/水杯等周边</p>
               </div>
             </button>
 
@@ -249,7 +257,7 @@ export const HomePage: React.FC = () => {
               <BookOpen className="w-5 h-5 text-sky-600" aria-hidden="true" />
               <div className="mt-3">
                 <h3 className="text-sm font-bold text-slate-900">活动规则</h3>
-                <p className="text-xs text-slate-400 mt-0.5">阶梯与说明</p>
+                <p className="text-xs text-slate-400 mt-0.5">5.6-5.19 打卡 · 6.7 截止兑奖</p>
               </div>
             </button>
           </div>
@@ -264,8 +272,10 @@ export const HomePage: React.FC = () => {
                 <Award className="w-4 h-4" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">校园远眺排行榜</h3>
-                <p className="text-xs text-slate-400">查看{user.college}实时排名</p>
+                <h3 className="text-sm font-bold text-slate-900">全国与校园排行榜</h3>
+                <p className="text-xs text-slate-400">
+                  {user.school ? `查看全国及${user.school}排名` : '查看你的全国护眼排名'}
+                </p>
               </div>
             </div>
             <ArrowUpRight className="w-4 h-4 text-slate-400" aria-hidden="true" />

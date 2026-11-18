@@ -9,6 +9,26 @@ export type CheckInActivityType =
   | 'phone_free_meal'
   | 'eye_drops';
 
+export type StudyActivityType = 'study_work' | CheckInActivityType;
+
+export interface StudyModeOption {
+  id: StudyActivityType;
+  label: string;
+  kind: 'study' | 'eyecare';
+  defaultMinutes: number;
+  description: string;
+}
+
+export interface EyeCareRecord {
+  id: string;
+  activity: CheckInActivityType;
+  label: string;
+  durationMinutes: number;
+  completedAt: string;
+  sourceLabel: string;
+  checkedIn: boolean;
+}
+
 export interface ActivityMeta {
   type: CheckInActivityType;
   label: string;
@@ -23,9 +43,9 @@ export interface ActivityMeta {
 
 export interface UserProfile {
   name: string;
-  studentId: string;
+  school: string;
   college: string;
-  club: string;
+  enrollmentYear: string;
   dailyGoalMinutes: number;
   soundEnabled: boolean;
   breakReminderEnabled: boolean;
@@ -42,14 +62,17 @@ export interface CheckInRecord {
   locationNote: string;
   leaveReason: string;
   stampUnlocked?: string;
+  participantOrder: number;
 }
 
 export interface StudySession {
   id: string;
+  activityType: StudyActivityType;
   modeLabel: string;
   focusMinutes: number;
   completedAt: string;
   status: 'completed' | 'ended_early';
+  isEyeCareRecord: boolean;
 }
 
 export interface StampSlot {
@@ -76,6 +99,11 @@ export type MallCategory = 'all' | 'vouchers' | 'samples' | 'merchandise' | 'tic
 export interface MallReward {
   id: string;
   title: string;
+  boxCountLabel?: string;
+  specLabel?: string;
+  originalPrice?: number;
+  discountAmount?: number;
+  finalPrice?: number;
   category: Exclude<MallCategory, 'all'>;
   pointsCost: number;
   requiredMinutesTier: number;
@@ -109,7 +137,8 @@ export interface VoucherItem {
 export interface LeaderboardGroup {
   id: string;
   name: string;
-  type: 'college' | 'club';
+  type: 'college' | 'national';
+  school?: string;
   totalMinutes: number;
   membersCount: number;
   avgMinutes: number;
@@ -118,20 +147,27 @@ export interface LeaderboardGroup {
 export interface PosterPayload {
   id: string;
   studentName: string;
+  school: string;
   college: string;
-  club: string;
+  enrollmentYear: string;
   activityLabel: string;
   leaveReason: string;
   durationMinutes: number;
   timestamp: string;
   locationNote: string;
   leaveCode: string;
+  participantOrder: number;
 }
 
-export interface PomodoroPreset {
+export interface HyloProductOption {
   id: string;
-  label: string;
-  minutes: number;
-  kind: 'focus' | 'rest';
-  description: string;
+  boxes: number;
+  title: string;
+  specLabel: string;
+  originalPrice: number;
+  discountAmount: number;
+  finalPrice: number;
+  couponTitle: string;
+  codePrefix: string;
+  imageUrl: string;
 }

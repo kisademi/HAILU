@@ -8,6 +8,7 @@ import {
   Trophy,
   User,
 } from 'lucide-react';
+import { HyloLogoMark } from './HyloBrandAssets';
 import { useAppState } from '../context/AppStateContext';
 import { SubPageId, TabId } from '../types';
 
@@ -53,9 +54,10 @@ export const NavigationShell: React.FC<{ children: React.ReactNode }> = ({ child
           <button
             type="button"
             onClick={() => navigateTab('home')}
-            className="text-base font-bold tracking-tight text-slate-900 hover:text-sky-700 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2"
+            className="text-base font-bold tracking-tight text-slate-900 hover:text-sky-700 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2.5"
           >
-            <Eye className="w-5 h-5 text-sky-600" aria-hidden="true" />
+            <HyloLogoMark className="h-6 w-auto" />
+            <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
             <span>海露钟</span>
           </button>
 

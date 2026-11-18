@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import { Copy, Download, Eye, Stamp } from 'lucide-react';
+import { Copy, Download, Stamp } from 'lucide-react';
+import { HyloLogoMark, HyloMascotCharacter } from '../components/HyloBrandAssets';
 import { QrCodeSvg } from '../components/QrCodeSvg';
+import { BASE_TODAY_CHECKINS, POSTER_HASHTAGS } from '../data/campaignData';
 import { useAppState } from '../context/AppStateContext';
 
 export const SharePosterPage: React.FC = () => {
-  const { posterPayload, user, checkIns, showToast, navigateTab } = useAppState();
+  const { posterPayload, user, checkIns, todayCheckInParticipants, showToast, navigateTab } =
+    useAppState();
   const [downloading, setDownloading] = useState(false);
 
   const fallback = checkIns[0];
   const poster = posterPayload || {
     id: fallback?.id || 'hl-default',
     studentName: user.name,
+    school: user.school,
     college: user.college,
-    club: user.club,
+    enrollmentYear: user.enrollmentYear,
     activityLabel: fallback?.label || '望向远方',
     leaveReason:
       fallback?.leaveReason || '暂别屏幕，望向6米外的云朵、树梢与天际线。',
@@ -20,17 +24,22 @@ export const SharePosterPage: React.FC = () => {
     timestamp: fallback?.timestamp || '今天',
     locationNote: fallback?.locationNote || '主图书馆四楼窗边',
     leaveCode: 'HL-2026',
+    participantOrder: fallback?.participantOrder || todayCheckInParticipants || BASE_TODAY_CHECKINS,
   };
 
-  const hashtags = '#海露钟 #让眼睛休息一下 #校园眼假期计划';
+  const identityLine = poster.school
+    ? `${poster.school}${poster.college ? ` · ${poster.college}` : ''}${poster.enrollmentYear ? ` · ${poster.enrollmentYear}` : ''}`
+    : `全国护眼同行者${poster.enrollmentYear ? ` · ${poster.enrollmentYear}入学` : ''}`;
+
+  const orderLabel = `你是今日第 ${poster.participantOrder.toLocaleString()} 位已经打卡的人`;
 
   const handleCopyShareText = async () => {
-    const text = `【护眼请假条】${poster.studentName}（${poster.college}）正在${poster.locationNote}进行 ${poster.durationMinutes} 分钟「${poster.activityLabel}」。${hashtags}`;
+    const text = `【护眼请假条】${poster.studentName}是今日第 ${poster.participantOrder} 位打卡护眼的人，正在${poster.locationNote}进行 ${poster.durationMinutes} 分钟「${poster.activityLabel}」。${POSTER_HASHTAGS}`;
     try {
       await navigator.clipboard.writeText(text);
       showToast('分享文案与话题已复制。');
     } catch {
-      showToast(`可复制话题：${hashtags}`);
+      showToast(`可复制话题：${POSTER_HASHTAGS}`);
     }
   };
 
@@ -58,7 +67,7 @@ export const SharePosterPage: React.FC = () => {
 
       ctx.fillStyle = '#BAE6FD';
       ctx.font = '500 20px sans-serif';
-      ctx.fillText('海露钟 · 校园护眼通行证', 86, 102);
+      ctx.fillText('海露钟 · 护眼通行证', 86, 102);
 
       ctx.fillStyle = '#FFFFFF';
       ctx.font = '700 42px sans-serif';
@@ -70,39 +79,43 @@ export const SharePosterPage: React.FC = () => {
 
       ctx.fillStyle = '#64748B';
       ctx.font = '500 20px sans-serif';
-      ctx.fillText('请假人', 86, 274);
+      ctx.fillText('请假人', 86, 270);
       ctx.fillStyle = '#0F172A';
       ctx.font = '700 32px sans-serif';
-      ctx.fillText(poster.studentName, 86, 316);
+      ctx.fillText(poster.studentName, 86, 312);
 
       ctx.fillStyle = '#475569';
-      ctx.font = '400 22px sans-serif';
-      ctx.fillText(`${poster.college} · ${poster.club}`, 86, 354);
+      ctx.font = '400 21px sans-serif';
+      ctx.fillText(identityLine, 86, 348);
+
+      ctx.fillStyle = '#0369A1';
+      ctx.font = '600 21px sans-serif';
+      ctx.fillText(orderLabel, 86, 384);
 
       ctx.strokeStyle = '#E2E8F0';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(86, 392);
-      ctx.lineTo(664, 392);
+      ctx.moveTo(86, 412);
+      ctx.lineTo(664, 412);
       ctx.stroke();
 
       ctx.fillStyle = '#64748B';
       ctx.font = '500 20px sans-serif';
-      ctx.fillText('休假方式与时长', 86, 444);
+      ctx.fillText('休假方式与时长', 86, 460);
       ctx.fillStyle = '#0369A1';
       ctx.font = '700 30px sans-serif';
-      ctx.fillText(`${poster.activityLabel} · ${poster.durationMinutes} 分钟`, 86, 486);
+      ctx.fillText(`${poster.activityLabel} · ${poster.durationMinutes} 分钟`, 86, 502);
 
       ctx.fillStyle = '#F6FAFE';
       ctx.beginPath();
-      ctx.roundRect(86, 524, 578, 168, 20);
+      ctx.roundRect(86, 536, 578, 160, 20);
       ctx.fill();
 
       ctx.fillStyle = '#0F172A';
       ctx.font = '400 24px sans-serif';
       const chars = Array.from(poster.leaveReason);
       let line = '';
-      let y = 576;
+      let y = 588;
       for (const ch of chars) {
         const test = line + ch;
         if (ctx.measureText(test).width > 515) {
@@ -117,8 +130,8 @@ export const SharePosterPage: React.FC = () => {
 
       ctx.fillStyle = '#64748B';
       ctx.font = '400 20px sans-serif';
-      ctx.fillText(`地点：${poster.locationNote}`, 86, 748);
-      ctx.fillText(`时间：${poster.timestamp}`, 86, 782);
+      ctx.fillText(`地点：${poster.locationNote}`, 86, 750);
+      ctx.fillText(`时间：${poster.timestamp}`, 86, 784);
 
       ctx.strokeStyle = '#0284C7';
       ctx.lineWidth = 3.5;
@@ -138,8 +151,8 @@ export const SharePosterPage: React.FC = () => {
       ctx.stroke();
 
       ctx.fillStyle = '#0369A1';
-      ctx.font = '500 19px sans-serif';
-      ctx.fillText(hashtags, 86, 900);
+      ctx.font = '600 20px sans-serif';
+      ctx.fillText(POSTER_HASHTAGS, 86, 900);
       ctx.fillStyle = '#64748B';
       ctx.font = '400 18px sans-serif';
       ctx.fillText('扫码进入「海露钟」小程序，一起给眼睛放假', 86, 938);
@@ -160,10 +173,13 @@ export const SharePosterPage: React.FC = () => {
       {/* Left: Minimalist Leave Request Poster */}
       <div className="lg:col-span-7 flex justify-center">
         <article className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 overflow-hidden">
-          <div className="bg-sky-600 text-white px-6 py-6 flex items-start justify-between gap-4">
+          <div className="bg-[#0062B8] text-white px-6 py-6 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] text-sky-100">海露钟 · 校园护眼通行证</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight">护眼请假条</h1>
+              <div className="inline-flex items-center gap-2 bg-white rounded-lg px-2 py-1 mb-2">
+                <HyloLogoMark className="h-3.5 w-auto" />
+                <span className="text-[10px] font-medium text-sky-800">海露钟 · 护眼通行证</span>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">护眼请假条</h1>
             </div>
             <span className="font-mono text-xs text-sky-100 tabular-nums">
               {poster.leaveCode}
@@ -175,12 +191,13 @@ export const SharePosterPage: React.FC = () => {
               <div>
                 <p className="text-[11px] text-slate-400">请假人</p>
                 <p className="text-lg font-bold text-slate-900">{poster.studentName}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {poster.college} · {poster.club}
+                <p className="text-xs text-slate-500 mt-0.5">{identityLine}</p>
+                <p className="text-xs font-medium text-sky-700 mt-1.5 tabular-nums">
+                  {orderLabel}
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-                <Eye className="w-5 h-5" aria-hidden="true" />
+              <div className="w-12 h-16 rounded-xl bg-[#F2F8FE] border border-sky-100 flex items-center justify-center p-1 shrink-0">
+                <HyloMascotCharacter className="w-9 h-13" />
               </div>
             </div>
 
@@ -219,7 +236,7 @@ export const SharePosterPage: React.FC = () => {
 
             <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-sky-700">{hashtags}</p>
+                <p className="text-xs font-medium text-sky-700">{POSTER_HASHTAGS}</p>
                 <p className="text-[11px] text-slate-400">
                   扫码进入「海露钟」一起记录护眼时刻
                 </p>
@@ -238,7 +255,11 @@ export const SharePosterPage: React.FC = () => {
             保存或转发你的护眼请假条
           </h2>
           <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-            将海报发到自习群或朋友圈，邀请同学和社团伙伴一起离开屏幕、望向远方。
+            海报已标注你是今日第{' '}
+            <span className="font-mono font-semibold text-sky-700 tabular-nums">
+              {poster.participantOrder.toLocaleString()}
+            </span>{' '}
+            位打卡护眼的人，带上 {POSTER_HASHTAGS} 分享给好友吧。
           </p>
         </div>
 

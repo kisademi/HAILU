@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { ArrowRight, Eye, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { HyloLogoMark, HyloMascotCharacter } from '../components/HyloBrandAssets';
 import { ResilientImage } from '../components/ResilientImage';
-import { COLLEGES, HERO_BANNER_IMAGE, STUDENT_CLUBS } from '../data/campaignData';
+import { COLLEGES, HERO_BANNER_IMAGE } from '../data/campaignData';
 import { useAppState } from '../context/AppStateContext';
 
 export const AuthPage: React.FC = () => {
   const { user, authorizeUser } = useAppState();
   const [name, setName] = useState(user.name);
-  const [studentId, setStudentId] = useState(user.studentId);
-  const [college, setCollege] = useState(user.college);
-  const [club, setClub] = useState(user.club);
+  const [school, setSchool] = useState(user.school);
+  const [college, setCollege] = useState(user.college || COLLEGES[0]);
+  const [enrollmentYear, setEnrollmentYear] = useState(user.enrollmentYear);
   const [agreed, setAgreed] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
-      setError('请先确认并同意校园护眼活动参与说明。');
+      setError('请先确认并同意护眼活动参与说明。');
       return;
     }
     if (!name.trim()) {
@@ -26,9 +27,9 @@ export const AuthPage: React.FC = () => {
     setError(null);
     authorizeUser({
       name: name.trim(),
-      studentId: studentId.trim() || '20260418',
-      college,
-      club,
+      school: school.trim(),
+      college: school.trim() ? college : '',
+      enrollmentYear: enrollmentYear.trim(),
     });
   };
 
@@ -41,28 +42,32 @@ export const AuthPage: React.FC = () => {
             src={HERO_BANNER_IMAGE}
             alt="阳光明媚的校园图书馆窗景，窗外绿意盎然、晴空辽阔"
             className="absolute inset-0 w-full h-full object-cover"
-            fallbackLabel="海露钟校园护眼计划"
+            fallbackLabel="海露钟护眼计划"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-sky-950/85 via-sky-950/30 to-sky-950/15" />
+          <div className="absolute inset-0 bg-gradient-to-t from-sky-950/90 via-sky-950/35 to-sky-950/20" />
 
-          <div className="relative z-10 p-6 sm:p-8 flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/95 text-sky-700 flex items-center justify-center">
-              <Eye className="w-5 h-5" aria-hidden="true" />
+          <div className="relative z-10 p-6 sm:p-8 flex items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-2.5 bg-white/95 rounded-xl px-3 py-1.5 shadow-sm">
+              <HyloLogoMark className="h-5 w-auto" />
+              <span className="h-3.5 w-px bg-slate-200" aria-hidden="true" />
+              <span className="font-display font-bold text-sm tracking-tight text-slate-900">
+                海露钟
+              </span>
             </div>
-            <span className="font-display font-bold text-lg tracking-tight text-white">
-              海露钟
-            </span>
+            <div className="w-11 h-14 rounded-xl bg-white/95 p-1 flex items-center justify-center shadow-sm">
+              <HyloMascotCharacter className="w-8 h-12" />
+            </div>
           </div>
 
           <div className="relative z-10 p-6 sm:p-8 space-y-2.5">
             <p className="text-xs text-sky-200">
-              校园护眼轻打卡 · 2026 秋季学期
+              护眼轻打卡 · 给眼睛放个假
             </p>
             <h1 className="text-2xl font-bold leading-snug text-white">
               暂离屏幕，给双眼一段安静的蓝色假期。
             </h1>
             <p className="text-xs text-sky-100/90 leading-relaxed">
-              用番茄钟管理自习节奏，记录远眺与看绿，集齐五枚眼假期印章。
+              用番茄钟管理专注节奏，记录远眺与看绿，参与全国护眼时长排行。
             </p>
           </div>
         </div>
@@ -70,79 +75,77 @@ export const AuthPage: React.FC = () => {
         {/* Right Authorization Form */}
         <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
           <div className="max-w-md w-full mx-auto">
-            <p className="text-xs font-medium text-sky-700">校园身份授权</p>
+            <p className="text-xs font-medium text-sky-700">身份授权</p>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">
               进入海露钟小程序
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              绑定所在学院与社团，你的每一次护眼休息都将计入集体远眺时长。
+              学校与入学时间为选填项：不填学校也可直接加入全国排行，填写后可解锁学校与学院排行。
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="auth-name" className="block text-xs font-medium text-slate-600 mb-1.5">
+                  用户昵称
+                </label>
+                <input
+                  id="auth-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例如：林浅"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="auth-name" className="block text-xs font-medium text-slate-600 mb-1.5">
-                    同学昵称
+                  <label htmlFor="auth-school" className="block text-xs font-medium text-slate-600 mb-1.5">
+                    学校（选填）
                   </label>
                   <input
-                    id="auth-name"
+                    id="auth-school"
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="例如：林浅"
+                    value={school}
+                    onChange={(e) => setSchool(e.target.value)}
+                    placeholder="选填，如：北京大学"
                     className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="auth-sid" className="block text-xs font-medium text-slate-600 mb-1.5">
-                    学号（选填）
+                  <label htmlFor="auth-enrollment" className="block text-xs font-medium text-slate-600 mb-1.5">
+                    入学时间（选填）
                   </label>
                   <input
-                    id="auth-sid"
+                    id="auth-enrollment"
                     type="text"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="20260418"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white font-mono text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+                    value={enrollmentYear}
+                    onChange={(e) => setEnrollmentYear(e.target.value)}
+                    placeholder="选填，如：2024年9月"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
                   />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="auth-college" className="block text-xs font-medium text-slate-600 mb-1.5">
-                  所在学院
-                </label>
-                <select
-                  id="auth-college"
-                  value={college}
-                  onChange={(e) => setCollege(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
-                >
-                  {COLLEGES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="auth-club" className="block text-xs font-medium text-slate-600 mb-1.5">
-                  参与社团
-                </label>
-                <select
-                  id="auth-club"
-                  value={club}
-                  onChange={(e) => setClub(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
-                >
-                  {STUDENT_CLUBS.map((cl) => (
-                    <option key={cl} value={cl}>
-                      {cl}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {school.trim() && (
+                <div>
+                  <label htmlFor="auth-college" className="block text-xs font-medium text-slate-600 mb-1.5">
+                    所在学院（选填）
+                  </label>
+                  <select
+                    id="auth-college"
+                    value={college}
+                    onChange={(e) => setCollege(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+                  >
+                    {COLLEGES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
                 <input
@@ -152,7 +155,7 @@ export const AuthPage: React.FC = () => {
                   className="mt-0.5 w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                 />
                 <span className="text-xs text-slate-500 leading-relaxed">
-                  我已阅读并同意海露钟校园护眼活动规则，允许将我的打卡时长计入学院与社团统计。
+                  我已阅读并同意海露钟护眼活动规则，允许将我的打卡时长计入全国排行（填写学校时同步计入学校与学院排行）。
                 </span>
               </label>
 
@@ -173,7 +176,7 @@ export const AuthPage: React.FC = () => {
 
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
               <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" aria-hidden="true" />
-              <span>数据仅保存在本地会话，可在「我的 - 设置」中随时切换或退出。</span>
+              <span>数据仅保存在本地会话，可在「我的 - 设置」中随时补充或修改学校信息。</span>
             </div>
           </div>
         </div>
