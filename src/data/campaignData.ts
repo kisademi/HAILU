@@ -1,5 +1,5 @@
 import heroBannerImg from '../assets/images/hero_eye_vacation_1794741100003.jpg';
-import productCampusBundleImg from '../assets/images/product_campus_bundle_1794741101605.jpg';
+import merchCupImg from '../assets/images/hylo_blue_white_mug_1795072831298.jpg';
 import merchPostcardImg from '../assets/images/hylo_campus_postcards_1795007693502.jpg';
 import merchCharmImg from '../assets/images/hylo_mascot_keychain_1795007691929.jpg';
 import {
@@ -18,7 +18,7 @@ import {
 export const HYLO_OFFICIAL_PRODUCT_IMAGE = './assets/aistudio/d7e608f919ac41b4921508c5935101a6_55f84edb.png';
 export const HERO_BANNER_IMAGE = heroBannerImg;
 export const PRODUCT_WELLNESS_KIT_IMAGE = HYLO_OFFICIAL_PRODUCT_IMAGE;
-export const PRODUCT_CAMPUS_BUNDLE_IMAGE = productCampusBundleImg;
+export const PRODUCT_CAMPUS_BUNDLE_IMAGE = './assets/aistudio/_____20261119150022_226_2_d94763fd.jpg';
 
 export const OFFICIAL_MALL_LINK = '#小程序://海露露观察/hbTLcEaVMg5SB7e';
 
@@ -384,25 +384,47 @@ export const MALL_REWARDS: MallReward[] = [
   {
     id: 'reward-merch-bag',
     title: '海露钟限定帆布包',
-    specLabel: '周边奖品 · 帆布包',
+    specLabel: '周边奖品 · 帆布包（5款可选）',
     category: 'merchandise',
     pointsCost: 200,
     requiredMinutesTier: 60,
     tierName: '晴空阶 (60分钟起)',
-    description: '蓝白极简厚实帆布通勤袋，可轻松装下笔记本与水杯，兑换截止6月7日。',
-    imageUrl: productCampusBundleImg,
+    description: '米白厚实棉麻帆布通勤袋，提供多种款式可选，正面为可爱插画，背面配「给眼睛放个假」品牌字体，兑换截止6月7日。',
+    imageUrl: './assets/aistudio/_____20261119150022_226_2_d94763fd.jpg',
+    gallery: [
+      {
+        imageUrl: './assets/aistudio/_____20261119150022_226_2_d94763fd.jpg',
+        styleName: '海岛度假蓝',
+      },
+      {
+        imageUrl: './assets/aistudio/_____20261119150023_227_2_8b902e1c.jpg',
+        styleName: '踏浪冲浪蓝',
+      },
+      {
+        imageUrl: './assets/aistudio/_____20261119150024_228_2_e77d5667.jpg',
+        styleName: '花丛活力红',
+      },
+      {
+        imageUrl: './assets/aistudio/_____20261119150025_229_2_edc267b8.jpg',
+        styleName: '欢聚蓝黄款',
+      },
+      {
+        imageUrl: './assets/aistudio/_____20261119150021_225_2_f374d2c9.jpg',
+        styleName: '元气甜酷粉',
+      },
+    ],
     stock: 90,
   },
   {
     id: 'reward-merch-cup',
-    title: '海露钟磨砂随行水杯',
+    title: '海露钟蓝白马克杯',
     specLabel: '周边奖品 · 水杯',
     category: 'merchandise',
     pointsCost: 300,
     requiredMinutesTier: 60,
     tierName: '晴空阶 (60分钟起)',
-    description: '晴空蓝白配色自习室随行水杯，提醒专注补水与定时远眺，兑换截止6月7日。',
-    imageUrl: productCampusBundleImg,
+    description: '蓝白撞色陶瓷马克杯，杯身印有海露专属「给眼睛放个假 · 海露 HYLO」主题字体，自习补水时提醒望远休息，兑换截止6月7日。',
+    imageUrl: merchCupImg,
     stock: 100,
   },
 ];

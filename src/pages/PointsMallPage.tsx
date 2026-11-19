@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Calendar, Check, Lock, ShoppingBag, Ticket } from 'lucide-react';
-import { HyloMerchVisual, HyloProductVisual } from '../components/HyloBrandAssets';
+import { HyloProductVisual } from '../components/HyloBrandAssets';
 import { ResilientImage } from '../components/ResilientImage';
+import { RewardGallerySlider } from '../components/RewardGallerySlider';
 import {
   CHECKIN_POINTS_WINDOW,
   DURATION_TIERS,
@@ -14,6 +15,7 @@ import { MallReward } from '../types';
 export const PointsMallPage: React.FC = () => {
   const { points, totalMinutes, redemptions, redeemMallReward, openSubPage } = useAppState();
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'vouchers' | 'merchandise'>('all');
+  const [selectedStyleMap, setSelectedStyleMap] = useState<Record<string, number>>({});
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   const currentTier =
@@ -26,7 +28,12 @@ export const PointsMallPage: React.FC = () => {
       : MALL_REWARDS.filter((item) => item.category === categoryFilter);
 
   const handleRedeem = (reward: MallReward) => {
-    const res = redeemMallReward(reward);
+    const activeIdx = selectedStyleMap[reward.id] || 0;
+    const chosenStyle = reward.gallery?.[activeIdx]?.styleName;
+    const payload = chosenStyle
+      ? { ...reward, title: `${reward.title}（${chosenStyle}）` }
+      : reward;
+    const res = redeemMallReward(payload);
     setFeedback({ ok: res.ok, text: res.message });
   };
 
@@ -137,20 +144,23 @@ export const PointsMallPage: React.FC = () => {
                     specLabel={item.boxCountLabel}
                     className="aspect-[4/3]"
                   />
-                ) : (item.id === 'reward-merch-charm' || item.id === 'reward-merch-postcard') && item.imageUrl ? (
+                ) : item.gallery && item.gallery.length > 0 ? (
+                  <RewardGallerySlider
+                    slides={item.gallery}
+                    title={item.title}
+                    activeIndex={selectedStyleMap[item.id] || 0}
+                    onSelectIndex={(idx) =>
+                      setSelectedStyleMap((prev) => ({ ...prev, [item.id]: idx }))
+                    }
+                  />
+                ) : (
                   <div className="aspect-[4/3] bg-sky-50 overflow-hidden">
                     <ResilientImage
-                      src={item.imageUrl}
+                      src={item.imageUrl || ''}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                ) : (
-                  <HyloMerchVisual
-                    rewardId={item.id}
-                    title={item.title}
-                    className="aspect-[4/3]"
-                  />
                 )}
                 <div className="p-5">
                   <p className="text-xs text-slate-400">

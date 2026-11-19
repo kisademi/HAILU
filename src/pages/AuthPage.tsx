@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
-import { HyloLogoMark, HyloMascotCharacter } from '../components/HyloBrandAssets';
+import { HyloLogoMark } from '../components/HyloBrandAssets';
 import { ResilientImage } from '../components/ResilientImage';
 import { COLLEGES, HERO_BANNER_IMAGE } from '../data/campaignData';
 import { useAppState } from '../context/AppStateContext';
@@ -46,16 +46,13 @@ export const AuthPage: React.FC = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-sky-950/90 via-sky-950/35 to-sky-950/20" />
 
-          <div className="relative z-10 p-6 sm:p-8 flex items-center justify-between gap-3">
+          <div className="relative z-10 p-6 sm:p-8 flex items-center">
             <div className="inline-flex items-center gap-2.5 bg-white/95 rounded-xl px-3 py-1.5 shadow-sm">
               <HyloLogoMark className="h-5 w-auto" />
               <span className="h-3.5 w-px bg-slate-200" aria-hidden="true" />
               <span className="font-display font-bold text-sm tracking-tight text-slate-900">
                 海露钟
               </span>
-            </div>
-            <div className="w-11 h-14 rounded-xl bg-white/95 p-1 flex items-center justify-center shadow-sm">
-              <HyloMascotCharacter className="w-8 h-12" />
             </div>
           </div>
 

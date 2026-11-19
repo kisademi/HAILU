@@ -110,6 +110,7 @@ export interface MallReward {
   tierName: string;
   description: string;
   imageUrl?: string;
+  gallery?: { imageUrl: string; styleName: string }[];
   stock: number;
 }
 
